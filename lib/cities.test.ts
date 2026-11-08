@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { createStore, type CitiesStore } from "./cities.ts";
+import { defaultStatePath } from "./storage.ts";
 import { emptyState, type City } from "./types.ts";
 
 const TMP_DIR = "/tmp/opencode/weather-cli";
@@ -62,6 +63,30 @@ describe("estado del store", () => {
     expect(store.state.unit).toBe("celsius");
     await store.setUnit("fahrenheit");
     expect(store.state.unit).toBe("fahrenheit");
+  });
+});
+
+describe("defaultStatePath", () => {
+  it("usa XDG_CONFIG_HOME cuando está definido", () => {
+    const original = Bun.env.XDG_CONFIG_HOME;
+    Bun.env.XDG_CONFIG_HOME = "/tmp/opencode/custom-config";
+    try {
+      expect(defaultStatePath()).toBe("/tmp/opencode/custom-config/weather-cli/cities.json");
+    } finally {
+      if (original === undefined) delete Bun.env.XDG_CONFIG_HOME;
+      else Bun.env.XDG_CONFIG_HOME = original;
+    }
+  });
+
+  it("cae al home del usuario si XDG_CONFIG_HOME está vacío", () => {
+    const original = Bun.env.XDG_CONFIG_HOME;
+    Bun.env.XDG_CONFIG_HOME = "   ";
+    try {
+      expect(defaultStatePath().endsWith("weather-cli/cities.json")).toBe(true);
+    } finally {
+      if (original === undefined) delete Bun.env.XDG_CONFIG_HOME;
+      else Bun.env.XDG_CONFIG_HOME = original;
+    }
   });
 });
 

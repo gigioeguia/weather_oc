@@ -1,6 +1,6 @@
 import type { AppState, City } from "./types.ts";
 import { emptyState } from "./types.ts";
-import { STATE_FILE, loadState, saveState } from "./storage.ts";
+import { defaultStatePath, loadState, saveState } from "./storage.ts";
 
 export interface CitiesStore {
   state: AppState;
@@ -15,7 +15,7 @@ export interface CitiesStore {
 class FileCitiesStore implements CitiesStore {
   state: AppState = emptyState();
 
-  constructor(private readonly filePath = STATE_FILE) {}
+  constructor(private readonly filePath = defaultStatePath()) {}
 
   async load(): Promise<void> {
     this.state = await loadState(this.filePath);
@@ -62,6 +62,6 @@ class FileCitiesStore implements CitiesStore {
   }
 }
 
-export function createStore(filePath = STATE_FILE): CitiesStore {
-  return new FileCitiesStore(filePath);
+export function createStore(filePath?: string): CitiesStore {
+  return new FileCitiesStore(filePath ?? defaultStatePath());
 }

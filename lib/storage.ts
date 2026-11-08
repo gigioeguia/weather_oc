@@ -1,8 +1,13 @@
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import type { AppState, TempUnit } from "./types.ts";
 import { emptyState } from "./types.ts";
 
-export const STATE_FILE = "cities.json";
+export function defaultStatePath(): string {
+  const configDir = Bun.env.XDG_CONFIG_HOME?.trim() || join(homedir(), ".config");
+  return join(configDir, "weather-cli", "cities.json");
+}
 
 function isCity(value: unknown): boolean {
   if (typeof value !== "object" || value === null) return false;
@@ -42,5 +47,6 @@ export async function loadState(filePath: string): Promise<AppState> {
 }
 
 export async function saveState(filePath: string, state: AppState): Promise<void> {
+  mkdirSync(dirname(filePath), { recursive: true });
   await Bun.write(filePath, JSON.stringify(state, null, 2) + "\n");
 }

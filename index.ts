@@ -1,11 +1,21 @@
-import { geocodeCity, getWeatherFor } from "./lib/api.ts";
+import {
+  geocodeCityCandidates,
+  getWeatherFor,
+  fetchDailyForecast,
+  type GeocodeCandidate,
+} from "./lib/api.ts";
 import { createStore } from "./lib/cities.ts";
 import {
+  ANSI,
   ask,
+  formatTemp,
   isClosed,
   printBanner,
+  printError,
   printMessage,
+  printSuccess,
   printWeather,
+  withSpinner,
 } from "./lib/ui.ts";
 import type { City } from "./lib/types.ts";
 
@@ -32,6 +42,17 @@ function parseMenuNumber(input: string, max: number): number | null {
   return value;
 }
 
+async function showWeatherFor(city: City): Promise<void> {
+  try {
+    const temperature = await withSpinner(`Consultando el clima de ${city.name}`, () =>
+      getWeatherFor(city, store.state.unit),
+    );
+    printWeather(city.name, temperature, store.state.unit);
+  } catch (error) {
+    printError(`No se pudo obtener el clima de ${city.name}: ${String(error)}`);
+  }
+}
+
 async function showDefaultCityWeather(): Promise<void> {
   const city = store.defaultCity();
   if (!city) {
@@ -39,15 +60,6 @@ async function showDefaultCityWeather(): Promise<void> {
     return;
   }
   await showWeatherFor(city);
-}
-
-async function showWeatherFor(city: City): Promise<void> {
-  try {
-    const temperature = await getWeatherFor(city, store.state.unit);
-    printWeather(city.name, temperature, store.state.unit);
-  } catch (error) {
-    printMessage(`No se pudo obtener el clima de ${city.name}: ${String(error)}`);
-  }
 }
 
 async function showAllCitiesWeather(): Promise<void> {
@@ -62,26 +74,54 @@ async function showAllCitiesWeather(): Promise<void> {
   }
 }
 
+function describeCandidate(candidate: GeocodeCandidate): string {
+  const region = [candidate.admin1, candidate.country].filter(Boolean).join(", ");
+  return region ? `${candidate.name} (${region})` : candidate.name;
+}
+
 async function addCity(): Promise<void> {
   const name = await ask("  Nombre de la ciudad: ");
   if (!name) {
-    printMessage("Debes escribir un nombre.");
+    printError("Debes escribir un nombre.");
     return;
   }
   try {
-    const city = await geocodeCity(name);
-    if (!city) {
+    const candidates = await withSpinner(`Buscando "${name}"`, () =>
+      geocodeCityCandidates(name),
+    );
+    if (candidates.length === 0) {
       printMessage(`No se encontró "${name}". Intenta con otro nombre.`);
       return;
     }
-    const added = await store.addCity(city);
-    if (!added) {
+    let chosen: GeocodeCandidate | null = candidates[0] ?? null;
+    if (candidates.length > 1) {
+      console.log(`\n  ${candidates.length} resultados para "${name}":`);
+      candidates.forEach((candidate, index) => {
+        console.log(`    ${index + 1}. ${describeCandidate(candidate)}`);
+      });
+      const input = await ask("  Número de la ciudad correcta: ");
+      const index = parseMenuNumber(input, candidates.length);
+      if (!index) {
+        printError("Número inválido.");
+        return;
+      }
+      chosen = candidates[index - 1] ?? null;
+    }
+    if (!chosen) return;
+    const city: City = {
+      name: chosen.name,
+      latitude: chosen.latitude,
+      longitude: chosen.longitude,
+    };
+    const saved = await store.addCity(city);
+    if (!saved) {
       printMessage(`${city.name} ya está registrada.`);
       return;
     }
-    printMessage(`Ciudad agregada: ${city.name} (${city.latitude}, ${city.longitude})`);
+    printSuccess(`Ciudad agregada: ${describeCandidate(chosen)}`);
+    printMessage(`Coordenadas: (${city.latitude}, ${city.longitude})`);
   } catch (error) {
-    printMessage(`No se pudo buscar "${name}": ${String(error)}`);
+    printError(`No se pudo buscar "${name}": ${String(error)}`);
   }
 }
 
@@ -95,7 +135,7 @@ async function pickCity(verb: string): Promise<City | null> {
   const input = await ask(`  Número de ciudad a ${verb}: `);
   const index = parseMenuNumber(input, cities.length);
   if (!index) {
-    printMessage("Número inválido.");
+    printError("Número inválido.");
     return null;
   }
   const city = cities[index - 1];
@@ -103,22 +143,43 @@ async function pickCity(verb: string): Promise<City | null> {
 }
 
 async function removeCity(): Promise<void> {
-  const city = await pickCity("eliminar");  if (!city) return;
+  const city = await pickCity("eliminar");
+  if (!city) return;
   await store.removeCity(city.name);
-  printMessage(`Ciudad eliminada: ${city.name}`);
+  printSuccess(`Ciudad eliminada: ${city.name}`);
 }
 
 async function setDefaultCity(): Promise<void> {
   const city = await pickCity("establecer como default");
   if (!city) return;
   await store.setDefault(city.name);
-  printMessage(`Ciudad default: ${city.name}`);
+  printSuccess(`Ciudad default: ${city.name}`);
+}
+
+async function showSevenDayForecast(): Promise<void> {
+  const city = await pickCity("consultar pronóstico de 7 días");
+  if (!city) return;
+  try {
+    const entries = await withSpinner(`Consultando pronóstico de ${city.name}`, () =>
+      fetchDailyForecast(city.latitude, city.longitude, store.state.unit, 7),
+    );
+    console.log(`\n  Pronóstico de 7 días para ${city.name}:`);
+    for (const entry of entries) {
+      const { date, max, min } = entry;
+      const maxTemp = ANSI.yellow(formatTemp(max, store.state.unit));
+      const minTemp = ANSI.cyan(formatTemp(min, store.state.unit));
+      console.log(`    ${date}  Max: ${maxTemp}  Min: ${minTemp}`);
+    }
+    console.log("");
+  } catch (error) {
+    printError(`No se pudo obtener el pronóstico de ${city.name}: ${String(error)}`);
+  }
 }
 
 async function toggleUnit(): Promise<void> {
   const next = store.state.unit === "celsius" ? "fahrenheit" : "celsius";
   await store.setUnit(next);
-  printMessage(`Unidad de temperatura: ${next === "celsius" ? "°C" : "°F"}`);
+  printSuccess(`Unidad de temperatura: ${next === "celsius" ? "°C" : "°F"}`);
 }
 
 async function exitApp(): Promise<void> {
@@ -132,6 +193,7 @@ const menu: Menu[] = [
   { key: "3", label: () => "Buscar y agregar ciudad", run: addCity },
   { key: "4", label: () => "Eliminar ciudad", run: removeCity },
   { key: "5", label: () => "Establecer ciudad default", run: setDefaultCity },
+  { key: "6", label: () => "Pronóstico de 7 días", run: showSevenDayForecast },
   { key: "8", label: (_count, unitSymbol) => `Ajustes (${unitSymbol})`, run: toggleUnit },
   { key: "9", label: () => "Salir", run: exitApp },
 ];
@@ -154,12 +216,12 @@ async function main(): Promise<void> {
         printMessage("¡Hasta luego!");
         break;
       }
-      printMessage("Opción inválida.");
+      printError("Opción inválida.");
       continue;
     }
     const item = menu.find((entry) => entry.key === input);
     if (!item) {
-      printMessage("Opción inválida.");
+      printError("Opción inválida.");
       continue;
     }
     await item.run();
