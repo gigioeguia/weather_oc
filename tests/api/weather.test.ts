@@ -1,28 +1,15 @@
-import { afterEach, describe, expect, it } from "bun:test";
-import { fetchCurrentTemperature, fetchDailyForecast } from "./weather.ts";
+import { describe, expect, it, afterEach } from "bun:test";
+import { fetchCurrentTemperature, fetchDailyForecast } from "../../src/api/weather.ts";
+import { restoreFetchStub, stubFetch } from "../helpers/stubFetch.ts";
 
-function stubFetch(responses: { url: (u: string) => boolean; body: unknown }[]): void {
-  globalThis.fetch = (async (input: unknown) => {
-    const url = String(input);
-    const match = responses.find((response) => response.url(url));
-    if (!match) throw new Error(`URL inesperada en el test: ${url}`);
-    return new Response(JSON.stringify(match.body), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }) as typeof fetch;
-}
-
-const ORIGINAL_FETCH = globalThis.fetch;
-afterEach(() => {
-  globalThis.fetch = ORIGINAL_FETCH;
-});
+// Tests de red real: solo con WEATHER_TEST_NETWORK=1
+const itNetwork = Bun.env.WEATHER_TEST_NETWORK === "1" ? it : it.skip;
 
 describe("fetchDailyForecast (con fetch simulado)", () => {
   it("combina fechas, máximos y mínimos en entradas diarias", async () => {
     stubFetch([
       {
-        url: (u) => u.includes("api.open-meteo.com"),
+        matches: (u) => u.includes("api.open-meteo.com"),
         body: {
           daily: {
             time: ["2026-11-08", "2026-11-09"],
@@ -39,19 +26,32 @@ describe("fetchDailyForecast (con fetch simulado)", () => {
   });
 
   it("lanza error si la respuesta no incluye daily", async () => {
-    stubFetch([{ url: (u) => u.includes("api.open-meteo.com"), body: {} }]);
+    stubFetch([{ matches: (u) => u.includes("api.open-meteo.com"), body: {} }]);
     await expect(fetchDailyForecast(45.41, -75.69, "celsius", 7)).rejects.toThrow();
+  });
+
+  it("lanza error si la respuesta es un HTTP que no es 2xx", async () => {
+    stubFetch([
+      {
+        matches: (u) => u.includes("api.open-meteo.com"),
+        status: 503,
+        body: { error: true },
+      },
+    ]);
+    await expect(fetchDailyForecast(45.41, -75.69, "celsius", 7)).rejects.toThrow("Error HTTP 503");
   });
 });
 
 describe("integración real con OpenMeteo", () => {
-  it("fetchCurrentTemperature devuelve una temperatura razonable", async () => {
+  itNetwork("fetchCurrentTemperature devuelve una temperatura razonable", async () => {
     const temperature = await fetchCurrentTemperature(45.41117, -75.69812, "celsius");
     expect(temperature).toBeGreaterThan(-100);
     expect(temperature).toBeLessThan(70);
   }, 15_000);
 
-  it("con coordenadas inválidas lanza error", async () => {
+  itNetwork("con coordenadas inválidas lanza error", async () => {
     await expect(fetchCurrentTemperature(9999, 9999, "celsius")).rejects.toThrow();
   }, 15_000);
 });
+
+afterEach(restoreFetchStub);

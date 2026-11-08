@@ -4,15 +4,23 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "bun build --compile src/index.ts --outfile weather",
+    "build": "bun run verify && bun build --compile src/index.ts --outfile weather",
     "start": "bun run src/index.ts",
     "dev": "bun run src/index.ts --watch",
-    "typecheck": "bun check"
+    "typecheck": "bun check",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "verify": "bun run typecheck && bun test",
+    "lint": "eslint ."
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@typescript-eslint/eslint-plugin": "^8.72.1",
+    "@typescript-eslint/parser": "^8.72.1",
+    "eslint": "^10.14.0"
   },
   "peerDependencies": {
-    "typescript": "^7"
+    "typescript": "^6",
+    "@types/bun": "latest"
   }
 }

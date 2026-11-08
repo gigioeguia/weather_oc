@@ -11,16 +11,33 @@ function wake(): void {
   waker();
 }
 
+// Encola una línea de entrada (stdin o tests)
+export function feedInput(line: string): void {
+  pendingLines.push(line.replace(/\r$/, ""));
+  wake();
+}
+
+export function closeInput(): void {
+  eof = true;
+  wake();
+}
+
+// Reemplaza la cola de entrada completa (tests: aísla cada flujo interactivo)
+export function setInputQueue(lines: string[]): void {
+  pendingLines.length = 0;
+  eof = true;
+  wake();
+  for (const line of lines) feedInput(line);
+}
+
 // Lee la entrada línea por línea (TTY o stdin entubado) y la encola
 void (async () => {
   try {
     for await (const raw of console) {
-      pendingLines.push(raw.replace(/\r$/, ""));
-      wake();
+      feedInput(raw);
     }
   } finally {
-    eof = true;
-    wake();
+    closeInput();
   }
 })();
 

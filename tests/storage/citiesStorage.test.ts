@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { createCitiesStore, defaultStatePath, type CitiesStore } from "./citiesStorage.ts";
-import { setUnit } from "./settingsStorage.ts";
-import { emptyState, type AppState } from "../types/AppState.ts";
-import type { City } from "../types/City.ts";
+import { createCitiesStore, defaultStatePath, type CitiesStore } from "../../src/storage/citiesStorage.ts";
+import { setUnit } from "../../src/storage/settingsStorage.ts";
+import { emptyState, type AppState } from "../../src/types/AppState.ts";
+import type { City } from "../../src/types/City.ts";
 
 const TMP_DIR = "/tmp/opencode/weather-cli";
 const TMP_FILE = `${TMP_DIR}/cities.json`;

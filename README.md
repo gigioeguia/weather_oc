@@ -10,8 +10,10 @@ El objetivo de esta aplicación es que creemos una aplicación de consola que pi
 
 ## Stack
 
-- Bun.js
-- OpenMeteo
+- **Bun** — runtime, gestor de paquetes, test runner y compilación del binario
+- **TypeScript** — modo estricto
+- **OpenMeteo** — Geocoding + Forecast API (sin API key)
+- Cero dependencias de runtime; dev tooling: ESLint + `@types/bun`
 
 ## Ejemplo de petición http:
 
@@ -41,6 +43,7 @@ Esta es la apariencia que deseamos crear
   3. Buscar y agregar ciudad
   4. Eliminar ciudad
   5. Establecer ciudad default
+  6. Pronóstico de 7 días
   8. Ajustes (°C)
   9. Salir
 ════════════════════════════════════════

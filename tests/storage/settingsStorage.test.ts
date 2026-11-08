@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { setUnit } from "./settingsStorage.ts";
-import { createCitiesStore, loadState } from "./citiesStorage.ts";
-import type { AppState } from "../types/AppState.ts";
+import { setUnit } from "../../src/storage/settingsStorage.ts";
+import { createCitiesStore, loadState } from "../../src/storage/citiesStorage.ts";
+import type { AppState } from "../../src/types/AppState.ts";
 
 const TMP_DIR = "/tmp/opencode/weather-cli-settings";
 const TMP_FILE = `${TMP_DIR}/cities.json`;

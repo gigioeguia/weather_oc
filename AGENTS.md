@@ -10,7 +10,8 @@ Weather CLI app (fully functional menu-driven CLI). TypeScript + Bun, ESM (`"typ
 - Install: `bun install` (lockfile is `bun.lock` — never use npm/pnpm)
 - Typecheck: `bun check` (aliased as `bun run typecheck`; NOT `tsc --noEmit`)
 - Single file typecheck: `bun check <file.ts>`
-- Tests: `bun test` (uses `bun:test`, image snapshot-free, no jest/vitest)
+- Tests: `bun test` (uses `bun:test`, tests en `tests/` reflejando `src/`, no jest/vitest)
+- Lint: `bun run lint` (ESLint 10 + typescript-eslint)
 - Executable binary: `bun build --compile src/index.ts --outfile weather` (output is gitignored)
 
 ## Toolchain rules (see bun-instructions.md for full details)
@@ -18,7 +19,7 @@ Weather CLI app (fully functional menu-driven CLI). TypeScript + Bun, ESM (`"typ
 - Always use Bun instead of Node tooling: `bun <file>`, `bun test`, `bunx`, `bun install`.
 - Bun auto-loads `.env` — do not use dotenv.
 - Use `bun:sqlite`, `Bun.file`, `Bun.serve()` / built-in APIs instead of express/better-sqlite3/ws/node:fs equivalents.
-- TypeScript peer dep is `^7`; tsconfig is strict with `noUncheckedIndexedAccess` and `verbatimModuleSyntax` (import types with `import type`).
+- TypeScript peer dep is `^6`; tsconfig is strict with `noUncheckedIndexedAccess` and `verbatimModuleSyntax` (import types with `import type`).
 
 ## Conventions
 
