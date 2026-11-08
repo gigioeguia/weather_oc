@@ -1,10 +1,6 @@
-export type TempUnit = "celsius" | "fahrenheit";
+import type { City } from "./City.ts";
 
-export interface City {
-  name: string;
-  latitude: number;
-  longitude: number;
-}
+export type TempUnit = "celsius" | "fahrenheit";
 
 export interface AppState {
   defaultCity: string | null;

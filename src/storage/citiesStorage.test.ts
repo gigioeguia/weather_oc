@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { createStore, type CitiesStore } from "./cities.ts";
-import { defaultStatePath } from "./storage.ts";
-import { emptyState, type City } from "./types.ts";
+import { createCitiesStore, defaultStatePath, type CitiesStore } from "./citiesStorage.ts";
+import { setUnit } from "./settingsStorage.ts";
+import { emptyState, type AppState } from "../types/AppState.ts";
+import type { City } from "../types/City.ts";
 
 const TMP_DIR = "/tmp/opencode/weather-cli";
 const TMP_FILE = `${TMP_DIR}/cities.json`;
@@ -14,7 +15,7 @@ let store: CitiesStore;
 beforeEach(async () => {
   await Bun.$`rm -rf ${TMP_DIR}`.quiet();
   await Bun.$`mkdir -p ${TMP_DIR}`.quiet();
-  store = createStore(TMP_FILE);
+  store = createCitiesStore(TMP_FILE);
   await store.load();
 });
 
@@ -58,12 +59,6 @@ describe("estado del store", () => {
     expect(await store.setDefault("Lima")).toBe(true);
     expect(store.defaultCity()?.name).toBe("Lima");
   });
-
-  it("alterna la unidad de temperatura", async () => {
-    expect(store.state.unit).toBe("celsius");
-    await store.setUnit("fahrenheit");
-    expect(store.state.unit).toBe("fahrenheit");
-  });
 });
 
 describe("defaultStatePath", () => {
@@ -95,9 +90,9 @@ describe("persistencia en cities.json", () => {
     await store.addCity(LIMA);
     await store.addCity(OTTAWA);
     await store.setDefault("Ottawa");
-    await store.setUnit("fahrenheit");
+    await setUnit(store.state, "fahrenheit", TMP_FILE);
 
-    const reloaded = createStore(TMP_FILE);
+    const reloaded = createCitiesStore(TMP_FILE);
     await reloaded.load();
     expect(reloaded.state).toEqual(store.state);
     expect(reloaded.defaultCity()?.name).toBe("Ottawa");
@@ -105,7 +100,7 @@ describe("persistencia en cities.json", () => {
 
   it("descarta datos corruptos y arranca con estado vacío", async () => {
     await Bun.write(TMP_FILE, "{ not valid json !!");
-    const reloaded = createStore(TMP_FILE);
+    const reloaded = createCitiesStore(TMP_FILE);
     await reloaded.load();
     expect(reloaded.state).toEqual(emptyState());
   });
@@ -119,7 +114,7 @@ describe("persistencia en cities.json", () => {
         cities: [LIMA, { name: "roto", latitude: "x" }],
       }),
     );
-    const reloaded = createStore(TMP_FILE);
+    const reloaded = createCitiesStore(TMP_FILE);
     await reloaded.load();
     expect(reloaded.state.cities).toEqual([LIMA]);
     expect(reloaded.state.defaultCity).toBe("Lima");
@@ -130,8 +125,15 @@ describe("persistencia en cities.json", () => {
       TMP_FILE,
       JSON.stringify({ defaultCity: "Ottawa", unit: "celsius", cities: [LIMA] }),
     );
-    const reloaded = createStore(TMP_FILE);
+    const reloaded = createCitiesStore(TMP_FILE);
     await reloaded.load();
     expect(reloaded.state.defaultCity).toBeNull();
+  });
+});
+
+describe("tipo AppState", () => {
+  it("unit forma parte del estado", () => {
+    const state: AppState = emptyState();
+    expect(state.unit).toBe("celsius");
   });
 });
