@@ -67,6 +67,23 @@ describe("showAllCitiesWeather", () => {
     expect(combined).toContain("Clima en Lima");
     expect(combined).toContain("Clima en Ottawa");
   });
+
+  it("muestra el progreso (i/N) en el rótulo de carga de cada ciudad", async () => {
+    seedState([LIMA, OTTAWA]);
+    stubFetch(weatherRoutes(10));
+    const output = await captureOutput(() => showAllCitiesWeather());
+    const combined = output.join("");
+    expect(combined).toContain("Consultando el clima de Lima (1/2)");
+    expect(combined).toContain("Consultando el clima de Ottawa (2/2)");
+  });
+
+  it("muestra el clima sin progreso en la consulta individual", async () => {
+    seedState([LIMA]);
+    stubFetch(weatherRoutes(10));
+    const output = await captureOutput(() => showDefaultCityWeather());
+    expect(output.join("")).toContain("Consultando el clima de Lima...");
+    expect(output.join("")).not.toContain("(1/1)");
+  });
 });
 
 describe("showSevenDayForecast", () => {

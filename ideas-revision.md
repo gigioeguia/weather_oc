@@ -6,7 +6,7 @@
 -[] **Tests:** no existen; conviene al menos probar storage y las APIs con mocks.
 -[x] **Binario:** compila bien; el estado ahora se guarda en `~/.config/weather-cli/cities.json` (respecta `XDG_CONFIG_HOME` con fallback a `~/.config`), verificado empíricamente.
 -[] **Escalabilidad:** ¿qué tan fácil será expandir con nuevas funcionalidades?
--[] **Carga:** ¿hay estado de carga en las tareas asíncronas?
+-[x] **Carga:** sí — las 3 tareas de red (geocoding, clima, pronóstico) usan `withSpinner` (mínimo 400ms, fallback a rótulo en pipes); el clima de todas muestra progreso `(i/N)`; timeout HTTP de 10s acota la espera; las tareas locales de storage no llevan spinner por diseño (I/O instantáneo).
 -[x] **7 day forecast:** ya implementado — opción 6 del menú (`fetchDailyForecast` en `src/api/weather.ts`), con spinner, colores y tests.
 
 ## CheckList adicional de revision:

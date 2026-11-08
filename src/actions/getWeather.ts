@@ -6,9 +6,9 @@ import { formatTemp } from "../utils/format.ts";
 import { ANSI } from "../utils/colors.ts";
 import type { City } from "../types/City.ts";
 
-export async function showWeatherFor(city: City): Promise<void> {
+export async function showWeatherFor(city: City, progress = ""): Promise<void> {
   try {
-    const temperature = await withSpinner(`Consultando el clima de ${city.name}`, () =>
+    const temperature = await withSpinner(`Consultando el clima de ${city.name}${progress}`, () =>
       getWeatherFor(city, citiesStore.state.unit),
     );
     printWeather(city.name, temperature, citiesStore.state.unit);
@@ -33,8 +33,8 @@ export async function showAllCitiesWeather(): Promise<void> {
     return;
   }
   console.log("");
-  for (const city of cities) {
-    await showWeatherFor(city);
+  for (const [index, city] of cities.entries()) {
+    await showWeatherFor(city, ` (${index + 1}/${cities.length})`);
   }
 }
 
