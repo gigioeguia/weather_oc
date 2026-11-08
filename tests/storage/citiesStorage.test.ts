@@ -1,11 +1,11 @@
+import { mkdir, rm } from "node:fs/promises";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "bun:test";
 import { createCitiesStore, defaultStatePath, type CitiesStore } from "../../src/storage/citiesStorage.ts";
 import { setUnit } from "../../src/storage/settingsStorage.ts";
 import { emptyState, type AppState } from "../../src/types/AppState.ts";
 import type { City } from "../../src/types/City.ts";
-
-const TMP_DIR = "/tmp/opencode/weather-cli";
-const TMP_FILE = `${TMP_DIR}/cities.json`;
+import { CITIES_DIR, CITIES_FILE, CUSTOM_CONFIG_DIR } from "../helpers/paths.ts";
 
 const LIMA: City = { name: "Lima", latitude: -12.046, longitude: -77.043 };
 const OTTAWA: City = { name: "Ottawa", latitude: 45.411, longitude: -75.698 };
@@ -13,9 +13,9 @@ const OTTAWA: City = { name: "Ottawa", latitude: 45.411, longitude: -75.698 };
 let store: CitiesStore;
 
 beforeEach(async () => {
-  await Bun.$`rm -rf ${TMP_DIR}`.quiet();
-  await Bun.$`mkdir -p ${TMP_DIR}`.quiet();
-  store = createCitiesStore(TMP_FILE);
+  await rm(CITIES_DIR, { recursive: true, force: true });
+  await mkdir(CITIES_DIR, { recursive: true });
+  store = createCitiesStore(CITIES_FILE);
   await store.load();
 });
 
@@ -64,9 +64,9 @@ describe("estado del store", () => {
 describe("defaultStatePath", () => {
   it("usa XDG_CONFIG_HOME cuando está definido", () => {
     const original = Bun.env.XDG_CONFIG_HOME;
-    Bun.env.XDG_CONFIG_HOME = "/tmp/opencode/custom-config";
+    Bun.env.XDG_CONFIG_HOME = CUSTOM_CONFIG_DIR;
     try {
-      expect(defaultStatePath()).toBe("/tmp/opencode/custom-config/weather-cli/cities.json");
+      expect(defaultStatePath()).toBe(join(CUSTOM_CONFIG_DIR, "weather-cli", "cities.json"));
     } finally {
       if (original === undefined) delete Bun.env.XDG_CONFIG_HOME;
       else Bun.env.XDG_CONFIG_HOME = original;
@@ -77,7 +77,7 @@ describe("defaultStatePath", () => {
     const original = Bun.env.XDG_CONFIG_HOME;
     Bun.env.XDG_CONFIG_HOME = "   ";
     try {
-      expect(defaultStatePath().endsWith("weather-cli/cities.json")).toBe(true);
+      expect(defaultStatePath().endsWith(join("weather-cli", "cities.json"))).toBe(true);
     } finally {
       if (original === undefined) delete Bun.env.XDG_CONFIG_HOME;
       else Bun.env.XDG_CONFIG_HOME = original;
@@ -90,31 +90,31 @@ describe("persistencia en cities.json", () => {
     await store.addCity(LIMA);
     await store.addCity(OTTAWA);
     await store.setDefault("Ottawa");
-    await setUnit(store.state, "fahrenheit", TMP_FILE);
+    await setUnit(store.state, "fahrenheit", CITIES_FILE);
 
-    const reloaded = createCitiesStore(TMP_FILE);
+    const reloaded = createCitiesStore(CITIES_FILE);
     await reloaded.load();
     expect(reloaded.state).toEqual(store.state);
     expect(reloaded.defaultCity()?.name).toBe("Ottawa");
   });
 
   it("descarta datos corruptos y arranca con estado vacío", async () => {
-    await Bun.write(TMP_FILE, "{ not valid json !!");
-    const reloaded = createCitiesStore(TMP_FILE);
+    await Bun.write(CITIES_FILE, "{ not valid json !!");
+    const reloaded = createCitiesStore(CITIES_FILE);
     await reloaded.load();
     expect(reloaded.state).toEqual(emptyState());
   });
 
   it("ignora entradas malformadas en cities", async () => {
     await Bun.write(
-      TMP_FILE,
+      CITIES_FILE,
       JSON.stringify({
         defaultCity: "Lima",
         unit: "celsius",
         cities: [LIMA, { name: "roto", latitude: "x" }],
       }),
     );
-    const reloaded = createCitiesStore(TMP_FILE);
+    const reloaded = createCitiesStore(CITIES_FILE);
     await reloaded.load();
     expect(reloaded.state.cities).toEqual([LIMA]);
     expect(reloaded.state.defaultCity).toBe("Lima");
@@ -122,10 +122,10 @@ describe("persistencia en cities.json", () => {
 
   it("nullifica la default si la ciudad guardada ya no existe", async () => {
     await Bun.write(
-      TMP_FILE,
+      CITIES_FILE,
       JSON.stringify({ defaultCity: "Ottawa", unit: "celsius", cities: [LIMA] }),
     );
-    const reloaded = createCitiesStore(TMP_FILE);
+    const reloaded = createCitiesStore(CITIES_FILE);
     await reloaded.load();
     expect(reloaded.state.defaultCity).toBeNull();
   });

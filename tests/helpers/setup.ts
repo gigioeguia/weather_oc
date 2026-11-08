@@ -1,5 +1,7 @@
+import { CONFIG_DIR } from "./paths.ts";
+
 // Preload de bun test: aísla la configuración real del usuario
-Bun.env.XDG_CONFIG_HOME = "/tmp/opencode/weather-cli-config";
+Bun.env.XDG_CONFIG_HOME = CONFIG_DIR;
 
 // Sin TTY en toda la suite: el spinner evita animación y esperas mínimas
 try {
